@@ -129,3 +129,4 @@ dmypy.json
 
 # Project specific
 data/
+.vscode/
