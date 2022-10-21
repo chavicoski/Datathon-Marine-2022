@@ -1,0 +1,14 @@
+defaults:
+  - _self_
+  - data_module: marine_sound
+  - model: resnet
+  - trainer: base_gpu
+  - logger: wandb
+  - callbacks: default
+
+experiment_name: "DatathonMarine2022"
+
+hydra:
+  run:
+    dir: ../experiments_runs/${now:%Y-%m-%d_%H-%M-%S}
+

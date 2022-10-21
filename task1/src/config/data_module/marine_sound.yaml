@@ -1,0 +1,13 @@
+_target_: lib.data.MarineSoundDataModule
+annotations_file: "${hydra:runtime.cwd}/../data/labels.csv"
+audio_dir: "${hydra:runtime.cwd}/../data/audios"
+target_sample_rate: 50000
+n_samples: 50000
+transform:
+  _target_: torchaudio.transforms.MelSpectrogram
+  sample_rate: 50000
+  n_fft: 512
+  hop_length: 256
+  n_mels: 64
+batch_size: 64
+num_workers: 32
