@@ -1,10 +1,11 @@
 defaults:
   - _self_
-  - preprocessing_pipeline: frame_classification
+  - preprocessing_pipeline: chunk_classification
 
 dataset_root_dir: "${hydra:runtime.cwd}/../data"
 audio_dir: "${dataset_root_dir}/audios"
 annotations_file: "${dataset_root_dir}/labels.csv"
+out_dir: "${dataset_root_dir}/preprocessed_data"
 
 hydra:
   run:

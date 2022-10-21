@@ -1,0 +1,4 @@
+_target_: lib.data.preprocessing.ChunkPreprocPipeline
+audio_dir: "${audio_dir}"
+annotations_file: "${annotations_file}"
+out_dir: "${out_dir}"
