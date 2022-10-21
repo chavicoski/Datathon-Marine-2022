@@ -1,0 +1,11 @@
+defaults:
+  - _self_
+  - preprocessing_pipeline: frame_classification
+
+dataset_root_dir: "${hydra:runtime.cwd}/../data"
+audio_dir: "${dataset_root_dir}/audios"
+annotations_file: "${dataset_root_dir}/labels.csv"
+
+hydra:
+  run:
+    dir: ../preprocessing_runs/${now:%Y-%m-%d_%H-%M-%S}

@@ -1,0 +1,3 @@
+_target_: lib.data.preprocessing.FramePreprocPipeline
+audio_dir: "${audio_dir}"
+annotations_file: "${annotations_file}"
