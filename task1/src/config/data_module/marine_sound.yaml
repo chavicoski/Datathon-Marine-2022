@@ -1,4 +1,4 @@
-_target_: lib.data.MarineSoundDataModule
+_target_: lib.data.loaders.MarineSoundDataModule
 annotations_file: "${hydra:runtime.cwd}/../data/labels.csv"
 audio_dir: "${hydra:runtime.cwd}/../data/audios"
 target_sample_rate: 50000
