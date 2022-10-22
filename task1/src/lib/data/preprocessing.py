@@ -31,10 +31,10 @@ class ChunkPreprocPipeline(object):
         audio_dir: str,
         annotations_file: str,
         out_dir: str,
-        frame_duration: float = 0.04,
-        hop_duration: float = 0.02,
+        frame_size: int = 1024,
+        hop_size: int = 512,
         sample_rate: int = 50000,
-        n_frames: int = 512,
+        chunk_size: int = 256,
         spec_type: str = "mel",
     ):
         """Initialization of the preprocessing pipeline
@@ -43,26 +43,26 @@ class ChunkPreprocPipeline(object):
             audio_dir (str): Path to the raw data audio directory
             annotations_file (str): Path to the raw data annotations file
             out_dir (str): Directory to save the new preprocessed dataset
-            frame_duration (float): Duration in seconds of a frame
-            hop_duration (float): Duration in seconds of the hop
+            frame_size (float): Number of samples per frame
+            hop_size (float): Number of samples to hop between frames
             sample_rate (int): Sample rate of the dataset
-            n_frames (int): Frames to take for each chunk to classify
+            chunk_size (int): Number of frames to take for each chunk
             spec_type (str): Type of spectrogram to use. Choices: "mel", "base"
         """
         self.audio_dir = audio_dir
         self.annotations = self._drop_wrong_labels(pd.read_csv(annotations_file))
-        self.frame_duration = frame_duration
-        self.hop_duration = hop_duration
+        self.frame_size = frame_size
+        self.hop_size = hop_size
         self.sample_rate = sample_rate
-        self.n_frames = n_frames
+        self.chunk_size = chunk_size
         self.spec_type = spec_type
 
         # Name of the new directories to store the preprocessed dataset
         self.out_dir = out_dir
         self.dataset_name = (
-            f"frame-{frame_duration}"
-            f"_hop-{hop_duration}"
-            f"_frames-{n_frames}"
+            f"frame-{self.frame_size}"
+            f"_hop-{self.hop_size}"
+            f"_chunk-{self.chunk_size}"
             f"_spec-{spec_type}"
         )
         self.dataset_dir = os.path.join(self.out_dir, self.dataset_name)
@@ -73,8 +73,8 @@ class ChunkPreprocPipeline(object):
         self.n_labels = len(self.sorted_labels)
         self.labels2idx = {l: i for i, l in enumerate(self.sorted_labels)}
         self.sample_duration = 1 / sample_rate
-        self.frame_size = int(self.frame_duration / self.sample_duration)
-        self.hop_size = int(self.hop_duration / self.sample_duration)
+        self.frame_duration = self.sample_duration * self.frame_size
+        self.hop_duration = self.sample_duration * self.hop_size
 
     def _drop_wrong_labels(self, annotations: pd.DataFrame) -> pd.DataFrame:
         """Drop the labels corresponding to long click events"""
@@ -82,10 +82,21 @@ class ChunkPreprocPipeline(object):
         drop_mask &= annotations.label == "click"
         return annotations[~drop_mask]
 
+    def _print_start_msg(self):
+        print("Preprocessing config:")
+        print(f" - frame size: {self.frame_size}")
+        print(f" - frame duration (sec): {self.frame_duration}")
+        print(f" - hop size: {self.hop_size}")
+        print(f" - hop duration (sec): {self.hop_duration}")
+        print(f" - chunk size (frames): {self.chunk_size}")
+        print(f" - labels: {self.sorted_labels}")
+
     def preprocess_data(self):
         # Prepare the dataset dir
         os.makedirs(self.dataset_dir, exist_ok=True)
         os.makedirs(self.tensor_dir, exist_ok=True)
+
+        self._print_start_msg()
 
         # Prepare the kernel to extract the spectrograms
         if self.spec_type == "base":
@@ -133,10 +144,14 @@ class ChunkPreprocPipeline(object):
 
             # Extract the chunks of frames that correspond to each sample
             spectrogram_chunks = librosa.util.frame(
-                spectrogram, frame_length=self.n_frames, hop_length=self.n_frames // 2
+                spectrogram,
+                frame_length=self.chunk_size,
+                hop_length=self.chunk_size // 2,
             )
             mask_chunks = librosa.util.frame(
-                labels_mask, frame_length=self.n_frames, hop_length=self.n_frames // 2
+                labels_mask,
+                frame_length=self.chunk_size,
+                hop_length=self.chunk_size // 2,
             )
 
             # Sanity check
