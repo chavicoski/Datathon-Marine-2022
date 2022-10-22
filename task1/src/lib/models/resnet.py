@@ -13,6 +13,7 @@ class ResNetModel(nn.Module):
         reduction_factor: int = 2,
         n_classes: int = 4,
         in_channels: int = 1,
+        drop_factor: float = 0.4,
     ):
         """
         Download the ResNet model and prepare it for the new task changing
@@ -28,6 +29,7 @@ class ResNetModel(nn.Module):
             n_classes (int): Number of units in the output layer
             in_channels (int): Number of channels of the input tensor. Used to
                                replicate the channels (if needed, up to 3)
+            drop_factor (float): Dropout factor to use in de Fully-Connected block
         """
         super().__init__()
         self.pretrained = pretrained
@@ -71,6 +73,7 @@ class ResNetModel(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(n_features, n_features // reduction_factor),
             nn.ReLU(),
+            nn.Dropout(p=drop_factor),
             nn.Linear(n_features // reduction_factor, n_classes),
             nn.Sigmoid(),  # Multilabel classification
         )

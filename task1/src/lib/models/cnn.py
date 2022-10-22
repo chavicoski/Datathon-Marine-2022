@@ -40,17 +40,17 @@ class CNNModel(nn.Module):
             )
             in_channels = out_channels
 
-        self.conv = nn.Sequential(
-            *conv_blocks,
-            nn.AdaptiveAvgPool2d((1, 1)),
-        )
+        self.conv = nn.Sequential(*conv_blocks)
+
+        self.pool = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten())
+
         self.linear = nn.Sequential(
-            nn.Flatten(),
             nn.Linear(out_channels, n_classes),
             nn.Sigmoid(),
         )
 
     def forward(self, x):
         x = self.conv(x)
+        x = self.pool(x)
         preds = self.linear(x)
         return preds
