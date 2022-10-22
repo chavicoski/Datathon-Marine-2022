@@ -1,7 +1,8 @@
 """Implementation of the data loaders
 """
 import os
-from typing import List, Tuple
+from random import random
+from typing import Any, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -50,6 +51,7 @@ class MarineSoundDataModule(pl.LightningDataModule):
         labels: List[str],
         batch_size: int = 32,
         num_workers: int = 32,
+        mixup_prob: float = 0.0,
     ):
         """DatasetModule constructor
 
@@ -59,6 +61,8 @@ class MarineSoundDataModule(pl.LightningDataModule):
             labels (List[str]): List of labels to use from the dataset
             batch_size (int): Number of audio samples per batch
             num_workers (int): Worker threads to use for data loading
+            mixup_prob (float): Probability to mixup the samples in a batch
+                                (only durin fit)
         """
         super().__init__()
         self.annotations = pd.read_csv(annotations_file, sep="\t")
@@ -66,6 +70,9 @@ class MarineSoundDataModule(pl.LightningDataModule):
         self.labels = labels
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.mixup_prob = mixup_prob
+        if self.mixup_prob:
+            self.mixup_transform = MixUpTransform()
 
     def setup(self, stage: str):
         # Split in train and test data
@@ -124,3 +131,43 @@ class MarineSoundDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=True,
         )
+
+    def on_after_batch_transfer(self, batch: Any, dataloader_idx: int) -> Any:
+        # Apply the mixup by probability and only during training (Trainer.fit)
+        if (random() < self.mixup_prob) and (self.trainer.state.fn == "fit"):
+            return self.mixup_transform(batch)
+        return batch
+
+
+class MixUpTransform(object):
+    """Batch tansformation top apply mixup by permuting the samples in the batch
+    and mixing them (fetures and labels)"""
+
+    def __init__(
+        self, alpha: float = 0.2, beta: float = 0.2, mixup_type: str = "hard"
+    ) -> None:
+        self.alpha = alpha
+        self.beta = beta
+        self.mixup_type = mixup_type
+
+    def __call__(self, batch: Any) -> Any:
+        x, y = batch
+
+        # Permute the samples in the batch to mix them randomly
+        batch_size = x.shape[0]
+        permutation = torch.randperm(batch_size)
+
+        # Get the mix factor
+        if self.mixup_type == "hard":
+            # c in range [0.3, 0.7]
+            c = np.random.beta(self.alpha, self.beta) * 0.4 + 0.3
+            mixed_y = torch.clamp(y + y[permutation], min=0, max=1)
+        elif self.mixup_type == "soft":
+            c = np.random.beta(self.alpha, self.beta)
+            mixed_y = torch.clamp(c * y + (1 - c) * y[permutation], min=0, max=1)
+        else:
+            raise ValueError(f"Unexpected mixup type ('{self.mixup_type}')")
+
+        mixed_x = c * x + (1 - c) * x[permutation]
+
+        return mixed_x, mixed_y

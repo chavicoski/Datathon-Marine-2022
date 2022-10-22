@@ -4,3 +4,4 @@ audio_dir: "${hydra:runtime.cwd}/../dataset/preprocessed_data/frame-1024_hop-512
 labels: ${labels}
 batch_size: 64
 num_workers: 16
+mixup_prob: 0.0
