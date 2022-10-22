@@ -2,3 +2,8 @@ _target_: lib.data.preprocessing.ChunkPreprocPipeline
 audio_dir: "${audio_dir}"
 annotations_file: "${annotations_file}"
 out_dir: "${out_dir}"
+frame_duration: 0.04
+hop_duration: 0.02
+sample_rate: 50000
+n_frames: 512
+
