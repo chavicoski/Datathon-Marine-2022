@@ -1,6 +1,5 @@
 """Implementation of the functionalities to preprocess the raw dataset to
 prepare it for training models"""
-import json
 import os
 from abc import ABC, abstractmethod
 from typing import Dict
@@ -140,14 +139,11 @@ class ChunkPreprocPipeline(object):
                 chunk_labels.append(onehot_label)
 
         # Save the labels in a TSV file
-        chunk_annotations = pd.DataFrame({"path": chunk_tensors, "label": chunk_labels})
+        chunk_labels = np.array(chunk_labels)
+        label_columns = {l: chunk_labels[:, i] for l, i in self.labels2idx.items()}
+        chunk_annotations = pd.DataFrame({"path": chunk_tensors, **label_columns})
         chunk_annot_file = os.path.join(self.dataset_dir, "labels.tsv")
-        print(f"Saving preprocessed data labels in '{chunk_annot_file}'")
         chunk_annotations.to_csv(chunk_annot_file, sep="\t", index=False)
-        # Save the dict to transform the labels into indexes of the on-hot vector
-        labels2idx_file = os.path.join(self.dataset_dir, "labels2idx.json")
-        with open(labels2idx_file, "w") as file_handle:
-            json.dump(self.labels2idx, file_handle)
 
 
 def labels_to_mask(
