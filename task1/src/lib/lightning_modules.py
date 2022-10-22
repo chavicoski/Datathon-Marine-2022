@@ -61,4 +61,4 @@ class ClassifierModule(pl.LightningModule):
         self.log(f"test_f1", self.test_acc, prog_bar=True)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=0.0002)
+        return torch.optim.SGD(self.parameters(), lr=0.00001, momentum=0.9)

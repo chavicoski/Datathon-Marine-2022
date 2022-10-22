@@ -35,6 +35,7 @@ class ChunkPreprocPipeline(object):
         hop_duration: float = 0.02,
         sample_rate: int = 50000,
         n_frames: int = 512,
+        spec_type: str = "mel",
     ):
         """Initialization of the preprocessing pipeline
 
@@ -46,6 +47,7 @@ class ChunkPreprocPipeline(object):
             hop_duration (float): Duration in seconds of the hop
             sample_rate (int): Sample rate of the dataset
             n_frames (int): Frames to take for each chunk to classify
+            spec_type (str): Type of spectrogram to use. Choices: "mel", "base"
         """
         self.audio_dir = audio_dir
         self.annotations = self._drop_wrong_labels(pd.read_csv(annotations_file))
@@ -53,10 +55,16 @@ class ChunkPreprocPipeline(object):
         self.hop_duration = hop_duration
         self.sample_rate = sample_rate
         self.n_frames = n_frames
+        self.spec_type = spec_type
 
         # Name of the new directories to store the preprocessed dataset
         self.out_dir = out_dir
-        self.dataset_name = f"frame-{frame_duration}_hop-{hop_duration}"
+        self.dataset_name = (
+            f"frame-{frame_duration}"
+            f"_hop-{hop_duration}"
+            f"_frames-{n_frames}"
+            f"_spec-{spec_type}"
+        )
         self.dataset_dir = os.path.join(self.out_dir, self.dataset_name)
         self.tensor_dir = os.path.join(self.dataset_dir, "audio_tensors")
 
@@ -80,12 +88,24 @@ class ChunkPreprocPipeline(object):
         os.makedirs(self.tensor_dir, exist_ok=True)
 
         # Prepare the kernel to extract the spectrograms
-        spect_transform = torchaudio.transforms.Spectrogram(
-            n_fft=self.frame_size,
-            win_length=self.frame_size,
-            hop_length=self.hop_size,
-            center=False,  # To match the number of frames in the labels_mask
-        )
+        if self.spec_type == "base":
+            spect_transform = torchaudio.transforms.Spectrogram(
+                n_fft=self.frame_size,
+                win_length=self.frame_size,
+                hop_length=self.hop_size,
+                center=False,  # To match the number of frames in the labels_mask
+            )
+        elif self.spec_type == "mel":
+            spect_transform = torchaudio.transforms.MelSpectrogram(
+                sample_rate=self.sample_rate,
+                n_fft=self.frame_size,
+                win_length=self.frame_size,
+                hop_length=self.hop_size,
+                center=False,  # To match the number of frames in the labels_mask
+                n_mels=64,
+            )
+        else:
+            raise ValueError(f"Invalid spectrogram type ('{self.spec_type})")
 
         # Create the samples from the chunks
         chunk_tensors = []  # .pt tensors file names

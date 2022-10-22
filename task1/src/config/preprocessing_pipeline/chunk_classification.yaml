@@ -5,5 +5,6 @@ out_dir: "${out_dir}"
 frame_duration: 0.04
 hop_duration: 0.02
 sample_rate: 50000
-n_frames: 512
+n_frames: 256
+spec_type: "mel"
 

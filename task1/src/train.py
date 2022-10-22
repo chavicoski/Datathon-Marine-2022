@@ -28,7 +28,9 @@ def main(cfg: DictConfig):
     # Test phase
     best_model = ckpt_callback.best_model_path
     print(f"Going to load the model for testing from '{best_model}'")
-    lightning_module = ClassifierModule.load_from_checkpoint(best_model, model=model)
+    lightning_module = ClassifierModule.load_from_checkpoint(
+        best_model, model=model, labels=cfg.labels
+    )
     trainer.test(lightning_module, data_module)
 
 
