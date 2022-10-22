@@ -18,6 +18,7 @@ def main(cfg: DictConfig):
 
     # Prepare the trainer
     logger: Logger = instantiate(cfg.logger)
+    logger.log_hyperparams(cfg)
     ckpt_callback = instantiate(cfg.callbacks.checkpoint)
     callbacks = [ckpt_callback]
     trainer: Trainer = instantiate(cfg.trainer, logger=logger, callbacks=callbacks)
