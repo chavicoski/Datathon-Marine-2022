@@ -1,6 +1,7 @@
 import hydra
 from hydra.utils import instantiate
 from lib.lightning_modules import ClassifierModule
+from lib.utils import set_all_seeds
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, Trainer
 from pytorch_lightning.loggers import Logger
@@ -9,6 +10,9 @@ from torch.nn import Module
 
 @hydra.main(config_path="config", config_name="train")
 def main(cfg: DictConfig):
+    # Set random seeds for reproducibility
+    set_all_seeds(cfg.seed)
+
     # Prepare the data
     data_module: LightningDataModule = instantiate(cfg.data_module)
 

@@ -6,6 +6,8 @@ dataset_root_dir: "${hydra:runtime.cwd}/../dataset"
 audio_dir: "${dataset_root_dir}/audios"
 annotations_file: "${dataset_root_dir}/labels.csv"
 out_dir: "${dataset_root_dir}/preprocessed_data"
+# Random seed for all the libraries
+seed: 2727
 
 hydra:
   run:

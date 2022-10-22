@@ -36,6 +36,7 @@ class ChunkPreprocPipeline(object):
         sample_rate: int = 50000,
         chunk_size: int = 256,
         spec_type: str = "mel",
+        n_mels: int = 64,
         only_events: bool = False,
     ):
         """Initialization of the preprocessing pipeline
@@ -49,6 +50,7 @@ class ChunkPreprocPipeline(object):
             sample_rate (int): Sample rate of the dataset
             chunk_size (int): Number of frames to take for each chunk
             spec_type (str): Type of spectrogram to use. Choices: "mel", "base"
+            n_mels (int): Number of mel filters to use (is using spec_type="mel")
             only_events (bool): Creates a dataset with chunks with at least one label
         """
         self.audio_dir = audio_dir
@@ -58,6 +60,7 @@ class ChunkPreprocPipeline(object):
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
         self.spec_type = spec_type
+        self.n_mels = n_mels
         self.only_events = only_events
 
         # Name of the new directories to store the preprocessed dataset
@@ -68,6 +71,8 @@ class ChunkPreprocPipeline(object):
             f"_chunk-{self.chunk_size}"
             f"_spec-{spec_type}"
         )
+        if self.spec_type == "mel":
+            self.dataset_name += f"_mels-{self.n_mels}"
         if self.only_events:
             self.dataset_name += "_only-events"
 
@@ -119,7 +124,7 @@ class ChunkPreprocPipeline(object):
                 win_length=self.frame_size,
                 hop_length=self.hop_size,
                 center=False,  # To match the number of frames in the labels_mask
-                n_mels=64,
+                n_mels=self.n_mels,
             )
         else:
             raise ValueError(f"Invalid spectrogram type ('{self.spec_type})")

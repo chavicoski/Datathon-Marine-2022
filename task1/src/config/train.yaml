@@ -12,6 +12,8 @@ labels:
   - "whistle"
   - "cetaceans_allfreq"
   - "allfreq"
+# Random seed for all the libraries
+seed: 2727
 
 hydra:
   run:
