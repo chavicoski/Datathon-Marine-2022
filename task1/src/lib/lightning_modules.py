@@ -1,5 +1,7 @@
 """Implementation of the Lightning modules to control the train/test loops
 """
+from typing import List
+
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
@@ -9,14 +11,19 @@ import torchmetrics
 class ClassifierModule(pl.LightningModule):
     """Module for training and testing classification models"""
 
-    def __init__(self, model):
+    def __init__(self, model, labels: List[str]):
         super().__init__()
         self.model = model
+        self.labels = labels
 
         # Metrics
-        self.train_acc = torchmetrics.Accuracy()
-        self.val_acc = torchmetrics.Accuracy()
-        self.test_acc = torchmetrics.Accuracy()
+        n_labels = len(self.labels)
+        self.train_acc = torchmetrics.classification.MultilabelAccuracy(n_labels)
+        self.val_acc = torchmetrics.classification.MultilabelAccuracy(n_labels)
+        self.test_acc = torchmetrics.classification.MultilabelAccuracy(n_labels)
+        self.train_f1 = torchmetrics.classification.MultilabelF1Score(n_labels)
+        self.val_f1 = torchmetrics.classification.MultilabelF1Score(n_labels)
+        self.test_f1 = torchmetrics.classification.MultilabelF1Score(n_labels)
 
     def forward(self, x):
         return self.model(x)
@@ -24,7 +31,7 @@ class ClassifierModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
-        loss = F.cross_entropy(logits, y)
+        loss = F.mse_loss(logits, y)
         self.train_acc(logits, y)
         self.log(f"train_loss", loss, prog_bar=True)
         self.log(f"train_acc", self.train_acc, prog_bar=True)
@@ -33,7 +40,7 @@ class ClassifierModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
-        loss = F.cross_entropy(logits, y)
+        loss = F.mse_loss(logits, y)
         self.val_acc(logits, y)
         self.log(f"val_loss", loss, prog_bar=True)
         self.log(f"val_acc", self.val_acc, prog_bar=True)
@@ -41,7 +48,7 @@ class ClassifierModule(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
-        loss = F.cross_entropy(logits, y)
+        loss = F.mse_loss(logits, y)
         self.test_acc(logits, y)
         self.log(f"test_loss", loss, prog_bar=True)
         self.log(f"test_acc", self.test_acc, prog_bar=True)

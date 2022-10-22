@@ -1,11 +1,10 @@
 import hydra
 from hydra.utils import instantiate
+from lib.lightning_modules import ClassifierModule
 from omegaconf import DictConfig
-from pytorch_lightning import LightningDataModule, LightningModule, Trainer
+from pytorch_lightning import LightningDataModule, Trainer
 from pytorch_lightning.loggers import Logger
 from torch.nn import Module
-
-from lib.lightning_modules import ClassifierModule
 
 
 @hydra.main(config_path="config", config_name="train")
@@ -15,7 +14,7 @@ def main(cfg: DictConfig):
 
     # Prepare the model
     model: Module = instantiate(cfg.model)
-    lightning_module = ClassifierModule(model=model)
+    lightning_module = ClassifierModule(model=model, labels=cfg.labels)
 
     # Prepare the trainer
     logger: Logger = instantiate(cfg.logger)

@@ -11,8 +11,8 @@ class ResNetModel(nn.Module):
         resnet_version: int = 18,
         pretrained: bool = True,
         reduction_factor: int = 2,
-        n_classes: int = 10,
-        in_channels: int = 3,
+        n_classes: int = 4,
+        in_channels: int = 1,
     ):
         """
         Download the ResNet model and prepare it for the new task changing
@@ -72,7 +72,7 @@ class ResNetModel(nn.Module):
             nn.Linear(n_features, n_features // reduction_factor),
             nn.ReLU(),
             nn.Linear(n_features // reduction_factor, n_classes),
-            nn.Softmax(dim=-1),
+            nn.Sigmoid(),  # Multilabel classification
         )
 
     def forward(self, x):
