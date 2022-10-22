@@ -48,7 +48,7 @@ class ChunkPreprocPipeline(object):
             n_frames (int): Frames to take for each chunk to classify
         """
         self.audio_dir = audio_dir
-        self.annotations = pd.read_csv(annotations_file)
+        self.annotations = self._drop_wrong_labels(pd.read_csv(annotations_file))
         self.frame_duration = frame_duration
         self.hop_duration = hop_duration
         self.sample_rate = sample_rate
@@ -67,6 +67,12 @@ class ChunkPreprocPipeline(object):
         self.sample_duration = 1 / sample_rate
         self.frame_size = int(self.frame_duration / self.sample_duration)
         self.hop_size = int(self.hop_duration / self.sample_duration)
+
+    def _drop_wrong_labels(self, annotations: pd.DataFrame) -> pd.DataFrame:
+        """Drop the labels corresponding to long click events"""
+        drop_mask = annotations.duration > 30
+        drop_mask &= annotations.label == "click"
+        return annotations[~drop_mask]
 
     def preprocess_data(self):
         # Prepare the dataset dir

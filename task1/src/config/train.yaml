@@ -8,7 +8,6 @@ defaults:
 
 experiment_name: "DatathonMarine2022"
 labels:
-  - "click"
   - "whistle"
   - "cetaceans_allfreq"
   - "allfreq"

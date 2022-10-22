@@ -3,4 +3,4 @@ annotations_file: "${hydra:runtime.cwd}/../dataset/preprocessed_data/frame-0.04_
 audio_dir: "${hydra:runtime.cwd}/../dataset/preprocessed_data/frame-0.04_hop-0.02/audio_tensors"
 labels: ${labels}
 batch_size: 32
-num_workers: 16
+num_workers: 8

@@ -13,7 +13,7 @@ def main(cfg: DictConfig):
     data_module: LightningDataModule = instantiate(cfg.data_module)
 
     # Prepare the model
-    model: Module = instantiate(cfg.model)
+    model: Module = instantiate(cfg.model, n_classes=len(cfg.labels))
     lightning_module = ClassifierModule(model=model, labels=cfg.labels)
 
     # Prepare the trainer

@@ -2,5 +2,4 @@ _target_: lib.models.resnet.ResNetModel
 resnet_version: 18
 pretrained: True
 reduction_factor: 2
-n_classes: 4
 in_channels: 1
