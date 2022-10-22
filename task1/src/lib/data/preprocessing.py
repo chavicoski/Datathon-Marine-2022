@@ -36,6 +36,7 @@ class ChunkPreprocPipeline(object):
         sample_rate: int = 50000,
         chunk_size: int = 256,
         spec_type: str = "mel",
+        only_events: bool = False,
     ):
         """Initialization of the preprocessing pipeline
 
@@ -48,6 +49,7 @@ class ChunkPreprocPipeline(object):
             sample_rate (int): Sample rate of the dataset
             chunk_size (int): Number of frames to take for each chunk
             spec_type (str): Type of spectrogram to use. Choices: "mel", "base"
+            only_events (bool): Creates a dataset with chunks with at least one label
         """
         self.audio_dir = audio_dir
         self.annotations = self._drop_wrong_labels(pd.read_csv(annotations_file))
@@ -56,6 +58,7 @@ class ChunkPreprocPipeline(object):
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
         self.spec_type = spec_type
+        self.only_events = only_events
 
         # Name of the new directories to store the preprocessed dataset
         self.out_dir = out_dir
@@ -65,6 +68,9 @@ class ChunkPreprocPipeline(object):
             f"_chunk-{self.chunk_size}"
             f"_spec-{spec_type}"
         )
+        if self.only_events:
+            self.dataset_name += "_only-events"
+
         self.dataset_dir = os.path.join(self.out_dir, self.dataset_name)
         self.tensor_dir = os.path.join(self.dataset_dir, "audio_tensors")
 
@@ -171,12 +177,16 @@ class ChunkPreprocPipeline(object):
                 tensor_fname = f"{audio_name}_chunk{c}.pt"
                 tensor_path = os.path.join(self.tensor_dir, tensor_fname)
                 torch.save(spec_chunk, tensor_path)
-                chunk_tensors.append(tensor_fname)
 
                 # Combine the mask_chunk frames to create a 1D one-hot vector
                 # for multilabel classification
                 acc_mask_frames = mask_chunk.sum(axis=1)  # Accumulate frames labels
                 onehot_label = acc_mask_frames.astype(bool).astype(np.int8)
+
+                if self.only_events and onehot_label.sum() == 0:
+                    continue  # Skip chunks without and event
+
+                chunk_tensors.append(tensor_fname)
                 chunk_labels.append(onehot_label)
 
         # Save the labels in a TSV file
