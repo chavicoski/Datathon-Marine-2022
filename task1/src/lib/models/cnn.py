@@ -47,7 +47,7 @@ class CNNModel(nn.Module):
         self.linear = nn.Sequential(
             nn.Flatten(),
             nn.Linear(out_channels, n_classes),
-            nn.Softmax(dim=1),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
