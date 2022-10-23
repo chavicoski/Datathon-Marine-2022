@@ -2,6 +2,6 @@ _target_: lib.data.loaders.MarineSoundDataModule
 annotations_file: "${hydra:runtime.cwd}/../dataset/preprocessed_data/frame-2048_hop-1024_chunk-512_spec-mel_mels-128/labels.tsv"
 audio_dir: "${hydra:runtime.cwd}/../dataset/preprocessed_data/frame-2048_hop-1024_chunk-512_spec-mel_mels-128/audio_tensors"
 labels: ${labels}
-batch_size: 32
+batch_size: 64
 num_workers: 16
 mixup_prob: 0.0

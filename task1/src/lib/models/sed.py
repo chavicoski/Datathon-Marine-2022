@@ -21,6 +21,7 @@ class ConvBlock(nn.Module):
                 stride=stride,
                 padding=padding,
             ),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=pool_size),
         )
@@ -74,6 +75,7 @@ class RecurrentCNNModel(nn.Module):
         self.linear = nn.Sequential(
             nn.Linear(lstm_h_size * 2, 32),
             nn.ReLU(),
+            nn.Dropout(0.3),
             nn.Linear(32, n_classes),
             nn.Sigmoid(),
         )
