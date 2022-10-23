@@ -1,15 +1,15 @@
 defaults:
   - _self_
   - data_module: marine_sound
-  - model: resnet
+  - model: recurrent_cnn
   - trainer: base_gpu
   - logger: wandb
   - callbacks: default
 
 experiment_name: "DatathonMarine2022"
 labels:
-  - "click"
   - "whistle"
+  - "click"
   - "cetaceans_allfreq"
   - "allfreq"
 # Random seed for all the libraries

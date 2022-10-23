@@ -29,13 +29,17 @@ class MarineSoundDataset(Dataset):
         return len(self.annotations)
 
     def __getitem__(self, index) -> Tuple[torch.Tensor, int]:
-        features = torch.load(self._get_features_path(index))
-        label = self._get_label(index)
+        feature_path, label_path = self._get_sample_paths(index)
+        features = torch.load(feature_path)
+        label = torch.load(label_path).astype(np.float32)
         return features, label
 
-    def _get_features_path(self, index) -> str:
-        features_tensor_name = self.annotations.path.iloc[index]
-        return os.path.join(self.audio_dir, features_tensor_name)
+    def _get_sample_paths(self, index) -> Tuple[str, str]:
+        """Returns the paths to the feature and label tensors"""
+        sample_annot = self.annotations.iloc[index]
+        features_path = os.path.join(self.audio_dir, sample_annot.feature_path)
+        label_path = os.path.join(self.audio_dir, sample_annot.mask_path)
+        return features_path, label_path
 
     def _get_label(self, index) -> np.ndarray:
         """Returns the one-hot vector of the selected labels"""

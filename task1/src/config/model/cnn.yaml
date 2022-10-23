@@ -1,2 +1,0 @@
-_target_: lib.models.cnn.CNNModel
-n_conv_blocks: 4

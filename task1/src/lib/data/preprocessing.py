@@ -53,7 +53,7 @@ class SEDPreprocPipeline(object):
             n_mels (int): Number of mel filters to use (is using spec_type="mel")
         """
         self.audio_dir = audio_dir
-        self.annotations = self._drop_wrong_labels(pd.read_csv(annotations_file))
+        self.annotations = self._drop_invalid_labels(pd.read_csv(annotations_file))
         self.frame_size = frame_size
         self.hop_size = hop_size
         self.sample_rate = sample_rate
@@ -83,10 +83,8 @@ class SEDPreprocPipeline(object):
         self.frame_duration = self.sample_duration * self.frame_size
         self.hop_duration = self.sample_duration * self.hop_size
 
-    def _drop_wrong_labels(self, annotations: pd.DataFrame) -> pd.DataFrame:
-        """Drop the labels corresponding to long click events"""
-        drop_mask = annotations.duration > 30
-        drop_mask &= annotations.label == "click"
+    def _drop_invalid_labels(self, annotations: pd.DataFrame) -> pd.DataFrame:
+        drop_mask = annotations.label == "volcano"  # Too few samples
         return annotations[~drop_mask]
 
     def _print_start_msg(self):

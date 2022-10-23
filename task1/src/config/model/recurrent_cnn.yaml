@@ -1,0 +1,5 @@
+_target_: lib.models.sed.RecurrentCNNModel
+n_conv_blocks: 5
+input_height: 128
+start_n_filters: 128
+filters_factor: 1
