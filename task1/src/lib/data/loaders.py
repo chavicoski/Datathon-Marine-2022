@@ -30,9 +30,12 @@ class MarineSoundDataset(Dataset):
         """
         self.drop_silence = drop_silence
         if self.drop_silence:
-            valid_samples = annotations[labels].apply(
-                lambda x: bool(x.sum()), axis="columns"
-            )
+            if "silence" in annotations.columns:
+                valid_samples = annotations["silence"] == 1
+            else:
+                valid_samples = annotations[labels].apply(
+                    lambda x: bool(x.sum()), axis="columns"
+                )
             print(f"Going to drop {(~valid_samples).sum()} silence samples")
             self.annotations = annotations[valid_samples]
         else:
