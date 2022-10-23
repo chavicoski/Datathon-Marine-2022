@@ -1,12 +1,10 @@
-_target_: lib.data.preprocessing.ChunkPreprocPipeline
+_target_: lib.data.preprocessing.SEDPreprocPipeline
 audio_dir: "${audio_dir}"
 annotations_file: "${annotations_file}"
 out_dir: "${out_dir}"
-frame_size: 1024
-hop_size: 512
+frame_size: 2048
+hop_size: 1024
 sample_rate: 50000
-chunk_size: 256
+chunk_size: 512
 spec_type: "mel"
-only_events: true
 n_mels: 128
-

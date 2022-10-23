@@ -1,5 +1,6 @@
 """Implementation of the functionalities to preprocess the raw dataset to
 prepare it for training models"""
+import json
 import os
 from abc import ABC, abstractmethod
 from typing import Dict
@@ -19,11 +20,11 @@ class PreprocPipeline(ABC):
         pass
 
 
-class ChunkPreprocPipeline(object):
-    """Pipeline to preprocess the data to perform direct audio classification
-
-    All the audios are divided into short chunks with a one-hot encoded label
-    to train a multilabel classifier
+class SEDPreprocPipeline(object):
+    """Pipeline to preprocess the data for Sound Event Detection (SED).
+    Generates spectrograms as input fetures and binary masks with shape
+    (labels, frames) as labels. In order to predict the labels at each
+    frame
     """
 
     def __init__(
@@ -37,7 +38,6 @@ class ChunkPreprocPipeline(object):
         chunk_size: int = 256,
         spec_type: str = "mel",
         n_mels: int = 64,
-        only_events: bool = False,
     ):
         """Initialization of the preprocessing pipeline
 
@@ -51,7 +51,6 @@ class ChunkPreprocPipeline(object):
             chunk_size (int): Number of frames to take for each chunk
             spec_type (str): Type of spectrogram to use. Choices: "mel", "base"
             n_mels (int): Number of mel filters to use (is using spec_type="mel")
-            only_events (bool): Creates a dataset with chunks with at least one label
         """
         self.audio_dir = audio_dir
         self.annotations = self._drop_wrong_labels(pd.read_csv(annotations_file))
@@ -61,7 +60,6 @@ class ChunkPreprocPipeline(object):
         self.chunk_size = chunk_size
         self.spec_type = spec_type
         self.n_mels = n_mels
-        self.only_events = only_events
 
         # Name of the new directories to store the preprocessed dataset
         self.out_dir = out_dir
@@ -73,8 +71,6 @@ class ChunkPreprocPipeline(object):
         )
         if self.spec_type == "mel":
             self.dataset_name += f"_mels-{self.n_mels}"
-        if self.only_events:
-            self.dataset_name += "_only-events"
 
         self.dataset_dir = os.path.join(self.out_dir, self.dataset_name)
         self.tensor_dir = os.path.join(self.dataset_dir, "audio_tensors")
@@ -101,6 +97,9 @@ class ChunkPreprocPipeline(object):
         print(f" - hop duration (sec): {self.hop_duration}")
         print(f" - chunk size (frames): {self.chunk_size}")
         print(f" - labels: {self.sorted_labels}")
+        print(f" - spectrogram type: {self.spec_type}")
+        if self.spec_type == "mel":
+            print(f" - # mels: {self.n_mels}")
 
     def preprocess_data(self):
         # Prepare the dataset dir
@@ -115,7 +114,7 @@ class ChunkPreprocPipeline(object):
                 n_fft=self.frame_size,
                 win_length=self.frame_size,
                 hop_length=self.hop_size,
-                center=False,  # To match the number of frames in the labels_mask
+                center=True,
             )
         elif self.spec_type == "mel":
             spect_transform = torchaudio.transforms.MelSpectrogram(
@@ -123,15 +122,16 @@ class ChunkPreprocPipeline(object):
                 n_fft=self.frame_size,
                 win_length=self.frame_size,
                 hop_length=self.hop_size,
-                center=False,  # To match the number of frames in the labels_mask
+                center=True,
                 n_mels=self.n_mels,
             )
         else:
             raise ValueError(f"Invalid spectrogram type ('{self.spec_type})")
 
         # Create the samples from the chunks
-        chunk_tensors = []  # .pt tensors file names
-        chunk_labels = []  # One-hot vector labels
+        chunk_features = []  # .pt feature tensors filenames
+        chunk_mask = []  # .pt mask label tensors filenames
+        chunk_labels = []  # One-hot vector with the labels present in the chunk
         for audio_name, audio_annot in tqdm(self.annotations.groupby("path")):
             # Load the audio data
             audio_file = os.path.join(self.audio_dir, f"{audio_name}.wav")
@@ -154,15 +154,16 @@ class ChunkPreprocPipeline(object):
             )
 
             # Extract the chunks of frames that correspond to each sample
+            hop_length = int(self.chunk_size * 0.8)  # 20% overlap
             spectrogram_chunks = librosa.util.frame(
                 spectrogram,
                 frame_length=self.chunk_size,
-                hop_length=self.chunk_size // 2,
+                hop_length=hop_length,
             )
             mask_chunks = librosa.util.frame(
                 labels_mask,
                 frame_length=self.chunk_size,
-                hop_length=self.chunk_size // 2,
+                hop_length=hop_length,
             )
 
             # Sanity check
@@ -179,27 +180,42 @@ class ChunkPreprocPipeline(object):
                 mask_chunk = mask_chunks[:, :, c]
 
                 # Save the features tensor
-                tensor_fname = f"{audio_name}_chunk{c}.pt"
+                tensor_fname = f"{audio_name}_chunk{c}_features.pt"
                 tensor_path = os.path.join(self.tensor_dir, tensor_fname)
                 torch.save(spec_chunk, tensor_path)
+                chunk_features.append(tensor_fname)
 
-                # Combine the mask_chunk frames to create a 1D one-hot vector
-                # for multilabel classification
+                # Save mask tensor
+                tensor_fname = f"{audio_name}_chunk{c}_label.pt"
+                tensor_path = os.path.join(self.tensor_dir, tensor_fname)
+                torch.save(mask_chunk, tensor_path)
+                chunk_mask.append(tensor_fname)
+
+                # Combine the mask chunk frames to create a 1D one-hot vector
+                # with the labels present in the chunk
                 acc_mask_frames = mask_chunk.sum(axis=1)  # Accumulate frames labels
                 onehot_label = acc_mask_frames.astype(bool).astype(np.int8)
-
-                if self.only_events and onehot_label.sum() == 0:
-                    continue  # Skip chunks without and event
-
-                chunk_tensors.append(tensor_fname)
                 chunk_labels.append(onehot_label)
 
-        # Save the labels in a TSV file
+        # Save the TSV file with paths for the data loader
         chunk_labels = np.array(chunk_labels)
-        label_columns = {l: chunk_labels[:, i] for l, i in self.labels2idx.items()}
-        chunk_annotations = pd.DataFrame({"path": chunk_tensors, **label_columns})
+        label_columns = {
+            l: chunk_labels[:, self.labels2idx[l]] for l in self.sorted_labels
+        }
+        chunk_annotations = pd.DataFrame(
+            {
+                "feature_path": chunk_features,
+                "mask_path": chunk_mask,
+                **label_columns,
+            }
+        )
         chunk_annot_file = os.path.join(self.dataset_dir, "labels.tsv")
         chunk_annotations.to_csv(chunk_annot_file, sep="\t", index=False)
+
+        # Save the dictionary to know each label index
+        labels_json = os.path.join(self.dataset_dir, "label2idx.json")
+        with open(labels_json, "w") as file_handle:
+            json.dump(self.labels2idx, file_handle)
 
 
 def labels_to_mask(
@@ -235,10 +251,10 @@ def labels_to_mask(
     mask = torch.zeros((n_labels, n_frames))
     # Compute some utility values
     sample_time = 1 / sample_rate
-    frame_time = sample_time * frame_size
+    hop_time = sample_time * hop_size
     for _, row in audio_annot.iterrows():
-        start_frame = int(row.start / frame_time)
-        end_frame = int(row.end / frame_time)
+        start_frame = int(row.start / hop_time)
+        end_frame = int(row.end / hop_time)
         mask[labels2idx[row.label], start_frame:end_frame] += 1
 
     return mask.bool().int()
