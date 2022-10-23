@@ -152,16 +152,15 @@ class SEDPreprocPipeline(object):
             )
 
             # Extract the chunks of frames that correspond to each sample
-            hop_length = int(self.chunk_size * 0.8)  # 20% overlap
             spectrogram_chunks = librosa.util.frame(
                 spectrogram,
                 frame_length=self.chunk_size,
-                hop_length=hop_length,
+                hop_length=self.chunk_size,
             )
             mask_chunks = librosa.util.frame(
                 labels_mask,
                 frame_length=self.chunk_size,
-                hop_length=hop_length,
+                hop_length=self.chunk_size,
             )
 
             # Sanity check

@@ -132,3 +132,5 @@ dataset/
 .vscode/
 preprocessing_runs/
 experiments_runs/
+artifacts/
+wandb/
