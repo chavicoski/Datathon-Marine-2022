@@ -33,6 +33,15 @@ class ConvBlock(nn.Module):
 
 
 class RecurrentCNNModel(nn.Module):
+    """Recurrent Convolutionan Neural Network
+
+    Uses first a set of convolutional layers to extract features. Then uses
+    a recurrent part to process the sequence of features. And finally predicts
+    the class for each frame using a fully-connected network. Note that the frames
+    dimension is always maintained, from input (batch, channels, freq_bins, frames)
+    to ouputut (batch, n_classes, frames)
+    """
+
     def __init__(
         self,
         n_conv_blocks: int = 3,
@@ -45,20 +54,19 @@ class RecurrentCNNModel(nn.Module):
         drop_factor: float = 0.2,
     ):
         super().__init__()
-        # Start with a bigger pool_size (4, 1) (in the frequency axis)
-        out_channels = start_n_filters
+        # Create the first conv block for the 1 channel input
         conv_blocks = [
             ConvBlock(
-                in_channels=1,
-                out_channels=out_channels,
+                in_channels=1,  # Mono audio
+                out_channels=start_n_filters,
                 pool_size=(pool_factor, 1),
                 drop_factor=drop_factor,
             ),
         ]
-        in_channels = out_channels
-        out_height = int(input_height / pool_factor)
 
-        # Add the following blocks with a smaller pool_size (2, 1)
+        in_channels = out_channels
+        out_channels = start_n_filters
+        out_height = int(input_height / pool_factor)  # For LSTM input shape
         for _ in range(n_conv_blocks - 1):
             out_channels = in_channels * filters_factor
             conv_blocks.append(
@@ -75,7 +83,7 @@ class RecurrentCNNModel(nn.Module):
         self.conv = nn.Sequential(*conv_blocks)
 
         self.recurrent = nn.LSTM(
-            input_size=out_height * out_channels,
+            input_size=out_height * out_channels,  # We stack all the channels
             hidden_size=lstm_h_size,
             num_layers=2,
             bidirectional=True,
@@ -84,6 +92,7 @@ class RecurrentCNNModel(nn.Module):
         )
 
         self.linear = nn.Sequential(
+            # lstm_h_size * 2 because the LSTM is bidirectional
             nn.Linear(lstm_h_size * 2, 32),
             nn.ReLU(),
             nn.Dropout(drop_factor),
@@ -91,14 +100,18 @@ class RecurrentCNNModel(nn.Module):
         )
 
     def forward(self, x):
+        # x: (batch, channels=1, freq_bins, frames)
         x = self.conv(x)
-        # Stack the channels comming from the conv block
-        # From (batch, channels, freq, frames) to (batch, channels * freq, frames)
+        # x: (batch, channels, new_freq_bins, frames)
+        # Stack the channels for the LSTM
         x = torch.cat([x[:, i, :, :] for i in range(x.size(1))], dim=1)
-        # From (batch, channels * freq, frames) to (batch, frames, channels * freq)
+        # x: (batch, channels * new_freq_bins, frames)
         x = torch.permute(x, (0, 2, 1))
+        # x: (batch, frames, channels * new_freq_bins)
         x, _ = self.recurrent(x)
+        # x: (batch, frames, lstm_hidden_size * 2)
         preds = self.linear(x)
-        # From (batch, frames, labels) to (batch, labels, frames)
+        # preds: (batch, frames, n_classes)
         preds = torch.permute(preds, (0, 2, 1))
+        # preds: (batch, n_classes, frames)
         return preds
