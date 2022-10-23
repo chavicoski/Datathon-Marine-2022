@@ -119,7 +119,7 @@ class MarineSoundDataModule(pl.LightningDataModule):
             val_split_annotations,
             self.audio_dir,
             self.labels,
-            False,
+            self.drop_silence,
         )
         self.test_dataset = MarineSoundDataset(
             test_annotations,

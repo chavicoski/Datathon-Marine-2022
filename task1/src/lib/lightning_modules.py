@@ -41,7 +41,7 @@ class ClassifierModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
-        loss = F.binary_cross_entropy(logits, y)
+        loss = F.binary_cross_entropy_with_logits(logits, y)
         self.train_acc(logits, y)
         self.train_precision(logits, y)
         self.train_recall(logits, y)
@@ -56,7 +56,7 @@ class ClassifierModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
-        loss = F.binary_cross_entropy(logits, y)
+        loss = F.binary_cross_entropy_with_logits(logits, y)
         self.val_acc(logits, y)
         self.val_precision(logits, y)
         self.val_recall(logits, y)
@@ -70,7 +70,7 @@ class ClassifierModule(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
-        loss = F.binary_cross_entropy(logits, y)
+        loss = F.binary_cross_entropy_with_logits(logits, y)
         self.test_acc(logits, y)
         self.test_precision(logits, y)
         self.test_recall(logits, y)

@@ -77,7 +77,6 @@ class RecurrentCNNModel(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(32, n_classes),
-            nn.Sigmoid(),
         )
 
     def forward(self, x):
