@@ -115,14 +115,14 @@ class SEDPreprocPipeline(object):
 
         # Prepare the kernel to extract the spectrograms
         if self.spec_type == "base":
-            spect_transform = torchaudio.transforms.Spectrogram(
+            spec_transform = torchaudio.transforms.Spectrogram(
                 n_fft=self.frame_size,
                 win_length=self.frame_size,
                 hop_length=self.hop_size,
                 center=True,
             )
         elif self.spec_type == "mel":
-            spect_transform = torchaudio.transforms.MelSpectrogram(
+            spec_transform = torchaudio.transforms.MelSpectrogram(
                 sample_rate=self.sample_rate,
                 n_fft=self.frame_size,
                 win_length=self.frame_size,
@@ -147,7 +147,7 @@ class SEDPreprocPipeline(object):
                 raise ValueError(f"The sampling rate of {audio_file} is {sr}!")
 
             # Compute the full audio spectrogram and labels mask
-            spectrogram = spect_transform(signal)
+            spectrogram = spec_transform(signal)
             labels_mask = labels_to_mask(
                 self.audio_dir,
                 audio_name,
