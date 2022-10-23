@@ -11,6 +11,7 @@ class ConvBlock(nn.Module):
         stride: int = 1,
         padding: int = 1,
         pool_size: int = (2, 1),
+        drop_factor: float = 0.2,
     ):
         super().__init__()
         self.conv = nn.Sequential(
@@ -23,6 +24,7 @@ class ConvBlock(nn.Module):
             ),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
+            nn.Dropout(drop_factor),
             nn.MaxPool2d(kernel_size=pool_size),
         )
 
@@ -33,21 +35,28 @@ class ConvBlock(nn.Module):
 class RecurrentCNNModel(nn.Module):
     def __init__(
         self,
-        n_conv_blocks: int = 5,
+        n_conv_blocks: int = 3,
         n_classes: int = 10,
         input_height: int = 128,  # 128 mel bands
         start_n_filters: int = 128,
         filters_factor: int = 1,
-        lstm_h_size: int = 32,
+        lstm_h_size: int = 64,
+        pool_factor: int = 4,
+        drop_factor: float = 0.2,
     ):
         super().__init__()
         # Start with a bigger pool_size (4, 1) (in the frequency axis)
         out_channels = start_n_filters
         conv_blocks = [
-            ConvBlock(in_channels=1, out_channels=out_channels, pool_size=(4, 1)),
+            ConvBlock(
+                in_channels=1,
+                out_channels=out_channels,
+                pool_size=(pool_factor, 1),
+                drop_factor=drop_factor,
+            ),
         ]
         in_channels = out_channels
-        out_height = int(input_height / 4)
+        out_height = int(input_height / pool_factor)
 
         # Add the following blocks with a smaller pool_size (2, 1)
         for _ in range(n_conv_blocks - 1):
@@ -56,11 +65,12 @@ class RecurrentCNNModel(nn.Module):
                 ConvBlock(
                     in_channels=in_channels,
                     out_channels=out_channels,
-                    pool_size=(2, 1),
+                    pool_size=(pool_factor, 1),
+                    drop_factor=drop_factor,
                 )
             )
             in_channels = out_channels
-            out_height = int(out_height / 2)
+            out_height = int(out_height / pool_factor)
 
         self.conv = nn.Sequential(*conv_blocks)
 
@@ -70,12 +80,13 @@ class RecurrentCNNModel(nn.Module):
             num_layers=2,
             bidirectional=True,
             batch_first=True,
+            dropout=drop_factor,
         )
 
         self.linear = nn.Sequential(
             nn.Linear(lstm_h_size * 2, 32),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(drop_factor),
             nn.Linear(32, n_classes),
         )
 

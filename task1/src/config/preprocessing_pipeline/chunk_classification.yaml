@@ -5,7 +5,7 @@ out_dir: "${out_dir}"
 frame_size: 2048
 hop_size: 1024
 sample_rate: 50000
-chunk_size: 512
+chunk_size: 128
 spec_type: "mel"
 n_mels: 128
 silence_label: True
