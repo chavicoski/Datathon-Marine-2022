@@ -5,3 +5,4 @@ labels: ${labels}
 batch_size: 64
 num_workers: 16
 mixup_prob: 0.0
+drop_silence: True

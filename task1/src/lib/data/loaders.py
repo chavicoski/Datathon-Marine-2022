@@ -13,15 +13,30 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class MarineSoundDataset(Dataset):
-    def __init__(self, annotations: pd.DataFrame, audio_dir: str, labels: List[str]):
+    def __init__(
+        self,
+        annotations: pd.DataFrame,
+        audio_dir: str,
+        labels: List[str],
+        drop_silence: bool = False,
+    ):
         """Dataset constructor
 
         Args:
             annotations_file (str): Audio annotations
             audio_dir (str): Path to the root folder of the audio data
             labels (List[str]): List of labels to use from the dataset
+            drop_silence (bool): To drop the samples without any event
         """
-        self.annotations = annotations
+        self.drop_silence = drop_silence
+        if self.drop_silence:
+            valid_samples = annotations[labels].apply(
+                lambda x: bool(x.sum()), axis="columns"
+            )
+            print(f"Going to drop {(~valid_samples).sum()} silence samples")
+            self.annotations = annotations[valid_samples]
+        else:
+            self.annotations = annotations
         self.audio_dir = audio_dir
         self.labels = labels
 
@@ -56,6 +71,7 @@ class MarineSoundDataModule(pl.LightningDataModule):
         batch_size: int = 32,
         num_workers: int = 32,
         mixup_prob: float = 0.0,
+        drop_silence: bool = False,
     ):
         """DatasetModule constructor
 
@@ -67,6 +83,8 @@ class MarineSoundDataModule(pl.LightningDataModule):
             num_workers (int): Worker threads to use for data loading
             mixup_prob (float): Probability to mixup the samples in a batch
                                 (only durin fit)
+            drop_silence (bool): To drop the samples without any event
+                                 (in train dataset)
         """
         super().__init__()
         self.annotations = pd.read_csv(annotations_file, sep="\t")
@@ -75,6 +93,7 @@ class MarineSoundDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.mixup_prob = mixup_prob
+        self.drop_silence = drop_silence
         if self.mixup_prob:
             self.mixup_transform = MixUpTransform()
 
@@ -91,16 +110,19 @@ class MarineSoundDataModule(pl.LightningDataModule):
             train_split_annotations,
             self.audio_dir,
             self.labels,
+            self.drop_silence,
         )
         self.val_dataset = MarineSoundDataset(
             val_split_annotations,
             self.audio_dir,
             self.labels,
+            False,
         )
         self.test_dataset = MarineSoundDataset(
             test_annotations,
             self.audio_dir,
             self.labels,
+            False,
         )
 
     def train_dataloader(self):
