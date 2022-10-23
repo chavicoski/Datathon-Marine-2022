@@ -8,3 +8,4 @@ sample_rate: 50000
 chunk_size: 512
 spec_type: "mel"
 n_mels: 128
+silence_label: True

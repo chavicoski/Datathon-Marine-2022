@@ -38,6 +38,7 @@ class SEDPreprocPipeline(object):
         chunk_size: int = 256,
         spec_type: str = "mel",
         n_mels: int = 64,
+        silence_label: bool = False,
     ):
         """Initialization of the preprocessing pipeline
 
@@ -51,6 +52,7 @@ class SEDPreprocPipeline(object):
             chunk_size (int): Number of frames to take for each chunk
             spec_type (str): Type of spectrogram to use. Choices: "mel", "base"
             n_mels (int): Number of mel filters to use (is using spec_type="mel")
+            silence_label (bool): To add an additional label (with idx 0) for silence
         """
         self.audio_dir = audio_dir
         self.annotations = self._drop_invalid_labels(pd.read_csv(annotations_file))
@@ -60,6 +62,7 @@ class SEDPreprocPipeline(object):
         self.chunk_size = chunk_size
         self.spec_type = spec_type
         self.n_mels = n_mels
+        self.silence_label = silence_label
 
         # Name of the new directories to store the preprocessed dataset
         self.out_dir = out_dir
@@ -71,12 +74,16 @@ class SEDPreprocPipeline(object):
         )
         if self.spec_type == "mel":
             self.dataset_name += f"_mels-{self.n_mels}"
+        if self.silence_label:
+            self.dataset_name += f"_silence-label"
 
         self.dataset_dir = os.path.join(self.out_dir, self.dataset_name)
         self.tensor_dir = os.path.join(self.dataset_dir, "audio_tensors")
 
         # Prepare auxiliary variables for data labeling
-        self.sorted_labels = self.annotations.label.value_counts().index
+        self.sorted_labels = list(self.annotations.label.value_counts().index)
+        if self.silence_label:
+            self.sorted_labels = ["silence"] + self.sorted_labels
         self.n_labels = len(self.sorted_labels)
         self.labels2idx = {l: i for i, l in enumerate(self.sorted_labels)}
         self.sample_duration = 1 / sample_rate
@@ -149,6 +156,7 @@ class SEDPreprocPipeline(object):
                 self.hop_size,
                 self.n_labels,
                 self.labels2idx,
+                self.silence_label,
             )
 
             # Extract the chunks of frames that correspond to each sample
@@ -223,6 +231,7 @@ def labels_to_mask(
     hop_size: int,
     n_labels: int,
     labels2idx: Dict[str, int],
+    silence_label: bool = False,
 ) -> torch.Tensor:
     """Given a DataFrame with all the annotations of an audio file, creates a binary
     2D tensor with shape (n_labels, n_frames) containing the labels at each frame
@@ -236,6 +245,7 @@ def labels_to_mask(
         hop_size (int): Hop size (is samples) to create the mask
         n_labels (int): Number of labels to use in the mask
         labels2idx (Dict[str, int]): Mapping from label name to index in the mask
+        silence_label (bool): To add an additional label (with idx 0) for silence
 
     Returns:
         torch.Tensor: Binary mask of the labels
@@ -253,5 +263,10 @@ def labels_to_mask(
         start_frame = int(row.start / hop_time)
         end_frame = int(row.end / hop_time)
         mask[labels2idx[row.label], start_frame:end_frame] += 1
+
+    if silence_label:
+        silence_mask = mask.sum(axis=0) < 1
+        assert mask[0, :].sum() == 0  # Should be empty
+        mask[0, :] = silence_mask
 
     return mask.bool().int()
