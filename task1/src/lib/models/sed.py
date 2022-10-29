@@ -64,8 +64,8 @@ class RecurrentCNNModel(nn.Module):
             ),
         ]
 
-        in_channels = out_channels
         out_channels = start_n_filters
+        in_channels = out_channels
         out_height = int(input_height / pool_factor)  # For LSTM input shape
         for _ in range(n_conv_blocks - 1):
             out_channels = in_channels * filters_factor
