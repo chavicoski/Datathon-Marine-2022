@@ -12,3 +12,5 @@ seed: 2727
 hydra:
   run:
     dir: ../preprocessing_runs/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    chdir: True

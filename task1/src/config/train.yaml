@@ -19,4 +19,6 @@ seed: 2727
 hydra:
   run:
     dir: ../experiments_runs/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    chdir: True
 

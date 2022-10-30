@@ -133,6 +133,9 @@ class SEDPreprocPipeline(object):
         else:
             raise ValueError(f"Invalid spectrogram type ('{self.spec_type})")
 
+        # Prepare the transform to change the scale of the spectrograms values
+        amplitude_to_db = torchaudio.transforms.AmplitudeToDB()
+
         # Create the samples from the chunks
         chunk_features = []  # .pt feature tensors filenames
         chunk_mask = []  # .pt mask label tensors filenames
@@ -147,7 +150,7 @@ class SEDPreprocPipeline(object):
                 raise ValueError(f"The sampling rate of {audio_file} is {sr}!")
 
             # Compute the full audio spectrogram and labels mask
-            spectrogram = spec_transform(signal)
+            spectrogram = amplitude_to_db(spec_transform(signal))
             labels_mask = labels_to_mask(
                 self.audio_dir,
                 audio_name,

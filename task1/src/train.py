@@ -8,7 +8,7 @@ from pytorch_lightning.loggers import Logger
 from torch.nn import Module
 
 
-@hydra.main(config_path="config", config_name="train")
+@hydra.main(version_base=None, config_path="config", config_name="train")
 def main(cfg: DictConfig):
     # Set random seeds for reproducibility
     set_all_seeds(cfg.seed)
